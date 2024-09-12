@@ -26,8 +26,8 @@ export async function getWeekSummary() {
         title: goals.title,
         completedAt: goalCompletions.createdAt,
         completedAtDate: sql/*sql*/ `
-            DATE(${goalCompletions.createdAt})
-            `.as("completedAtDate"),
+          DATE(${goalCompletions.createdAt})
+        `.as("completedAtDate"),
       })
       .from(goalCompletions)
       .innerJoin(goals, eq(goals.id, goalCompletions.goalId))
@@ -45,13 +45,13 @@ export async function getWeekSummary() {
       .select({
         completedAtDate: goalsCompletedInWeek.completedAtDate,
         completions: sql/*sql*/ `
-            JSON_AGG(
-                JSON_BUILD_OBJECT(
-                    'id', ${goalsCompletedInWeek.id},
-                    'title', ${goalsCompletedInWeek.title},
-                    'completedAt', ${goalsCompletedInWeek.completedAt},
-                )
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', ${goalsCompletedInWeek.id},
+              'title', ${goalsCompletedInWeek.title},
+              'completedAt', ${goalsCompletedInWeek.completedAt}
             )
+          )
         `.as("completions"),
       })
       .from(goalsCompletedInWeek)
@@ -65,27 +65,30 @@ export async function getWeekSummary() {
       id: string;
       title: string;
       completedAt: string;
-    }
+    }[]
   >;
 
   const result = await db
     .with(goalsCreatedUpToWeek, goalsCompletedInWeek, goalsCompletedByWeekDay)
     .select({
       completed:
-        sql/*sql */ `(SELECT COUNT(*) FROM ${goalsCompletedInWeek})`.mapWith(
+        sql/*sql*/ `(SELECT COUNT(*) FROM ${goalsCompletedInWeek})`.mapWith(
           Number
         ),
       total:
-        sql/*sql */ `(SELECT SUM(${goalsCreatedUpToWeek.desiredWeeklyFrequency}) FROM ${goalsCreatedUpToWeek})`.mapWith(
+        sql/*sql*/ `(SELECT SUM(${goalsCreatedUpToWeek.desiredWeeklyFrequency}) FROM ${goalsCreatedUpToWeek})`.mapWith(
           Number
         ),
-      goalsPerDay: sql/*sql */ <GoalsPerDay>`
+      goalsPerDay: sql/*sql*/ <GoalsPerDay>`
         JSON_OBJECT_AGG(
-            ${goalsCompletedByWeekDay.completedAtDate}, 
-            ${goalsCompletedByWeekDay.completions}
-        )`,
+          ${goalsCompletedByWeekDay.completedAtDate},
+          ${goalsCompletedByWeekDay.completions}
+        )
+      `,
     })
     .from(goalsCompletedByWeekDay);
 
-  return { summary: result[0] };
+  return {
+    summary: result[0],
+  };
 }
